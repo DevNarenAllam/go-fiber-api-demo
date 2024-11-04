@@ -1,0 +1,133 @@
+basePath: /
+definitions:
+  main.Player:
+    properties:
+      bats:
+        type: string
+      bbrefID:
+        type: string
+      birthCity:
+        type: string
+      birthCountry:
+        type: string
+      birthDay:
+        type: integer
+      birthMonth:
+        type: integer
+      birthState:
+        type: string
+      birthYear:
+        type: integer
+      deathCity:
+        type: string
+      deathCountry:
+        type: string
+      deathDay:
+        type: integer
+      deathMonth:
+        type: integer
+      deathState:
+        type: string
+      deathYear:
+        type: integer
+      debut:
+        type: string
+      finalGame:
+        type: string
+      height:
+        type: integer
+      nameFirst:
+        type: string
+      nameGiven:
+        type: string
+      nameLast:
+        type: string
+      playerID:
+        type: string
+      retroID:
+        type: string
+      throws:
+        type: string
+      weight:
+        type: integer
+    type: object
+host: localhost:3000
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: This is a sample server for managing players.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Players API
+  version: "1.0"
+paths:
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: Check the health of the service
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "503":
+          description: Service unavailable
+          schema: {}
+      summary: Health check
+      tags:
+      - health
+  /players:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all players
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.Player'
+            type: array
+      summary: Get all players
+      tags:
+      - players
+  /players/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a player by their ID
+      parameters:
+      - description: Player ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.Player'
+        "400":
+          description: Invalid player ID
+          schema: {}
+        "404":
+          description: Player not found
+          schema: {}
+      summary: Get player by ID
+      tags:
+      - players
+securityDefinitions:
+  BasicAuth:
+    type: basic
+swagger: "2.0"

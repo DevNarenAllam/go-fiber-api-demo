@@ -1,0 +1,15 @@
+version: '3'
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+      - redis
+  db:
+    image: mysql:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: Python#123
+  redis:
+    image: redis:latest
