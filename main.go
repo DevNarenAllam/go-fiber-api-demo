@@ -23,6 +23,11 @@ import (
 	_ "players.com/m/docs"
 )
 
+type ErrorResponse struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
 // Redis and GORM global clients
 var (
 	redisClient *redis.Client
@@ -46,29 +51,29 @@ func initRedis() *redis.Client {
 
 type Player struct {
 	PlayerID     string     `gorm:"column:playerID;type:varchar(10);primaryKey" json:"playerID"`
-	BirthYear    *int       `gorm:"column:birthYear;type:int" json:"birthYear,omitempty"`
-	BirthMonth   *int       `gorm:"column:birthMonth;type:int" json:"birthMonth,omitempty"`
-	BirthDay     *int       `gorm:"column:birthDay;type:int" json:"birthDay,omitempty"`
-	BirthCountry *string    `gorm:"column:birthCountry;type:varchar(50)" json:"birthCountry,omitempty"`
-	BirthState   *string    `gorm:"column:birthState;type:varchar(50)" json:"birthState,omitempty"`
-	BirthCity    *string    `gorm:"column:birthCity;type:varchar(50)" json:"birthCity,omitempty"`
-	DeathYear    *int       `gorm:"column:deathYear;type:int" json:"deathYear,omitempty"`
-	DeathMonth   *int       `gorm:"column:deathMonth;type:int" json:"deathMonth,omitempty"`
-	DeathDay     *int       `gorm:"column:deathDay;type:int" json:"deathDay,omitempty"`
-	DeathCountry *string    `gorm:"column:deathCountry;type:varchar(50)" json:"deathCountry,omitempty"`
-	DeathState   *string    `gorm:"column:deathState;type:varchar(50)" json:"deathState,omitempty"`
-	DeathCity    *string    `gorm:"column:deathCity;type:varchar(50)" json:"deathCity,omitempty"`
-	NameFirst    *string    `gorm:"column:nameFirst;type:varchar(50)" json:"nameFirst,omitempty"`
-	NameLast     *string    `gorm:"column:nameLast;type:varchar(50)" json:"nameLast,omitempty"`
-	NameGiven    *string    `gorm:"column:nameGiven;type:varchar(50)" json:"nameGiven,omitempty"`
-	Weight       *int       `gorm:"column:weight;type:int" json:"weight,omitempty"`
-	Height       *int       `gorm:"column:height;type:int" json:"height,omitempty"`
-	Bats         *string    `gorm:"column:bats;type:char(1)" json:"bats,omitempty"`
-	Throws       *string    `gorm:"column:throws;type:char(1)" json:"throws,omitempty"`
-	Debut        *time.Time `gorm:"column:debut;type:date" json:"debut,omitempty"`
-	FinalGame    *time.Time `gorm:"column:finalGame;type:date" json:"finalGame,omitempty"`
-	RetroID      *string    `gorm:"column:retroID;type:varchar(10)" json:"retroID,omitempty"`
-	BbrefID      *string    `gorm:"column:bbrefID;type:varchar(10)" json:"bbrefID,omitempty"`
+	BirthYear    *int       `gorm:"column:birthYear;type:int" json:"birthYear"`
+	BirthMonth   *int       `gorm:"column:birthMonth;type:int" json:"birthMonth"`
+	BirthDay     *int       `gorm:"column:birthDay;type:int" json:"birthDay"`
+	BirthCountry *string    `gorm:"column:birthCountry;type:varchar(50)" json:"birthCountry"`
+	BirthState   *string    `gorm:"column:birthState;type:varchar(50)" json:"birthState"`
+	BirthCity    *string    `gorm:"column:birthCity;type:varchar(50)" json:"birthCity"`
+	DeathYear    *int       `gorm:"column:deathYear;type:int" json:"deathYear"`
+	DeathMonth   *int       `gorm:"column:deathMonth;type:int" json:"deathMonth"`
+	DeathDay     *int       `gorm:"column:deathDay;type:int" json:"deathDay"`
+	DeathCountry *string    `gorm:"column:deathCountry;type:varchar(50)" json:"deathCountry"`
+	DeathState   *string    `gorm:"column:deathState;type:varchar(50)" json:"deathState"`
+	DeathCity    *string    `gorm:"column:deathCity;type:varchar(50)" json:"deathCity"`
+	NameFirst    *string    `gorm:"column:nameFirst;type:varchar(50)" json:"nameFirst"`
+	NameLast     *string    `gorm:"column:nameLast;type:varchar(50)" json:"nameLast"`
+	NameGiven    *string    `gorm:"column:nameGiven;type:varchar(50)" json:"nameGiven"`
+	Weight       *int       `gorm:"column:weight;type:int" json:"weight"`
+	Height       *int       `gorm:"column:height;type:int" json:"height"`
+	Bats         *string    `gorm:"column:bats;type:char(1)" json:"bats"`
+	Throws       *string    `gorm:"column:throws;type:char(1)" json:"throws"`
+	Debut        *time.Time `gorm:"column:debut;type:date" json:"debut"`
+	FinalGame    *time.Time `gorm:"column:finalGame;type:date" json:"finalGame"`
+	RetroID      *string    `gorm:"column:retroID;type:varchar(10)" json:"retroID"`
+	BbrefID      *string    `gorm:"column:bbrefID;type:varchar(10)" json:"bbrefID"`
 }
 
 // TableName explicitly sets the name of the table to match the existing schema
@@ -141,15 +146,12 @@ func main() {
 	app.Use(rateLimitMiddleware)
 	app.Use(throttleMiddleware)
 
-	// Define routes
-	app.Get("/players", cache("players", 10*time.Minute, getPlayers))
-	app.Get("/players/:id", func(c *fiber.Ctx) error {
-		id := c.Params("id")
-		if len(id) != 10 {
-			return fiber.NewError(fiber.StatusBadRequest, "Invalid player ID")
-		}
-		return cache("player:"+id, 10*time.Minute, getPlayerByID)(c)
-	})
+	// define an end point to return all players with caching
+	app.Get("/players", cache("players", time.Minute*5, getPlayers))
+	// define an end point to return a range of players
+	app.Get("/players/range", getPlayersRange)
+	// define an end point to return a single player
+	app.Get("/players/:playerID", getPlayerByID)
 
 	app.Get("/swagger/*", swagger.HandlerDefault)
 	// Health check endpoint
@@ -260,6 +262,43 @@ func cache(key string, expiration time.Duration, next fiber.Handler) fiber.Handl
 func getPlayers(c *fiber.Ctx) error {
 	var players []Player
 	db.Find(&players)
+	//fmt.Println(players)
+	return c.JSON(players)
+}
+
+// @Summary Get a range of players
+// @Description Get players with pagination using offset and limit
+// @Tags players
+// @Accept json
+// @Produce json
+// @Param offset query int false "Offset for pagination" default(0)
+// @Param limit query int false "Number of players to return" default(10)
+// @Success 200 {array} Player
+// @Failure 400 {object} ErrorResponse
+// @Router /players/range [get]
+func getPlayersRange(c *fiber.Ctx) error {
+	// Get offset and limit from query parameters with defaults
+	offset, err := strconv.Atoi(c.Query("offset", "0"))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid offset parameter")
+	}
+
+	limit, err := strconv.Atoi(c.Query("limit", "10"))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid limit parameter")
+	}
+
+	// Validate limit
+	if limit <= 0 || limit > 100 {
+		return fiber.NewError(fiber.StatusBadRequest, "Limit must be between 1 and 100")
+	}
+
+	var players []Player
+	result := db.Offset(offset).Limit(limit).Find(&players)
+	if result.Error != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Database error")
+	}
+
 	return c.JSON(players)
 }
 
@@ -276,7 +315,7 @@ func getPlayers(c *fiber.Ctx) error {
 //
 // Handler to get player by ID with cache
 func getPlayerByID(c *fiber.Ctx) error {
-	id := c.Params("id")
+	id := c.Params("playerID")
 	var player Player
 	if err := db.First(&player, "playerID = ?", id).Error; err != nil {
 		return fiber.NewError(fiber.StatusNotFound, "Player not found")

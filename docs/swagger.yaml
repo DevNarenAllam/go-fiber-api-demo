@@ -1,5 +1,12 @@
 basePath: /
 definitions:
+  main.ErrorResponse:
+    properties:
+      code:
+        type: integer
+      message:
+        type: string
+    type: object
   main.Player:
     properties:
       bats:
@@ -125,6 +132,37 @@ paths:
           description: Player not found
           schema: {}
       summary: Get player by ID
+      tags:
+      - players
+  /players/range:
+    get:
+      consumes:
+      - application/json
+      description: Get a range of players with an offset
+      parameters:
+      - description: Offset
+        in: query
+        name: offset
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.Player'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.ErrorResponse'
+      summary: Get a range of players
       tags:
       - players
 securityDefinitions:
